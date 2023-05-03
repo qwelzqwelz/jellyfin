@@ -46,7 +46,15 @@ namespace MediaBrowser.LocalMetadata.Images
 
         private List<LocalImageInfo> GetFilesFromParentFolder(ReadOnlySpan<char> filenameWithoutExtension, List<FileSystemMetadata> parentPathFiles)
         {
-            var thumbName = string.Concat(filenameWithoutExtension, "-thumb");
+            var suffixTypeDict = new Dictionary<string, ImageType>();
+            suffixTypeDict.Add("-poster", ImageType.Primary);
+            suffixTypeDict.Add("-cover", ImageType.Primary);
+            suffixTypeDict.Add("-thumb", ImageType.Backdrop);
+            suffixTypeDict.Add("-fanart", ImageType.Backdrop);
+            suffixTypeDict.Add("-landscape", ImageType.Backdrop);
+            suffixTypeDict.Add("-banner", ImageType.Banner);
+            suffixTypeDict.Add("-logo", ImageType.Logo);
+            suffixTypeDict.Add("-disc", ImageType.Disc);
 
             var list = new List<LocalImageInfo>(1);
 
@@ -57,17 +65,26 @@ namespace MediaBrowser.LocalMetadata.Images
                     continue;
                 }
 
-                if (BaseItem.SupportedImageExtensions.Contains(i.Extension.AsSpan(), StringComparison.OrdinalIgnoreCase))
+                if (!BaseItem.SupportedImageExtensions.Contains(i.Extension.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 {
-                    var currentNameWithoutExtension = Path.GetFileNameWithoutExtension(i.FullName.AsSpan());
+                    continue;
+                }
 
-                    if (filenameWithoutExtension.Equals(currentNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
+                var currentNameWithoutExtension = Path.GetFileNameWithoutExtension(i.FullName.AsSpan());
+
+                if (filenameWithoutExtension.Equals(currentNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
+                    continue;
+                }
+
+                foreach (KeyValuePair<string, ImageType> row in suffixTypeDict)
+                {
+                    var suffixName = string.Concat(filenameWithoutExtension, row.Key);
+                    if (currentNameWithoutExtension.Equals(suffixName, StringComparison.OrdinalIgnoreCase))
                     {
-                        list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
-                    }
-                    else if (currentNameWithoutExtension.Equals(thumbName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        list.Add(new LocalImageInfo { FileInfo = i, Type = ImageType.Primary });
+                        list.Add(new LocalImageInfo { FileInfo = i, Type = row.Value });
+                        break;
                     }
                 }
             }
